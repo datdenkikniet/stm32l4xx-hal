@@ -352,6 +352,115 @@ pub enum ClockSecuritySystem {
 
 const HSI: u32 = 16_000_000; // Hz
 
+pub struct TwoMSI;
+
+impl TwoMSI {
+    fn low_power_run(pwr: &mut Pwr) {
+        // Decrease the system clock frequency below 2 MHz
+        // LPR = 1
+        pwr.cr1.reg().modify(|_, w| w.lpr().set_bit())
+    }
+
+    fn return_from_low_power_run(pwr: &mut Pwr) {
+        // LPR = 0
+        pwr.cr1.reg().modify(|_, w| w.lpr().clear_bit());
+
+        // Wait until REGLPF = 0
+        while pwr.sr2.reg().read().reglpf().bit_is_set() {}
+
+        // Increase the system clock frequency
+    }
+
+    /// Spin up the MSI to 32 MHz
+    pub fn msi_32mhz(acr: &mut ACR, pwr: &mut Pwr) -> Clocks {
+        let rcc = unsafe { &*RCC::ptr() };
+
+        // Wait until MSI is ready
+        while rcc.cr.read().msirdy().bit_is_clear() {}
+
+        // Exit low power run
+        Self::return_from_low_power_run(pwr);
+
+        unsafe {
+            rcc.cr.modify(|_, w| {
+                w.msirange()
+                    .bits(MsiFreq::RANGE32M as u8)
+                    .msirgsel()
+                    .set_bit()
+                    .msion()
+                    .set_bit();
+
+                w
+            })
+        };
+
+        // Wait until MSI is running
+        while rcc.cr.read().msirdy().bit_is_clear() {}
+
+        unsafe {
+            acr.acr().write(|w| w.latency().bits(0b001));
+        }
+
+        Clocks {
+            hclk: Hertz(32_000_000),
+            lsi: false,
+            lse: false,
+            msi: Some(MsiFreq::RANGE32M),
+            hsi48: false,
+            pclk1: Hertz(32_000_000),
+            pclk2: Hertz(32_000_000),
+            ppre1: 0,
+            ppre2: 0,
+            sysclk: Hertz(32_000_000),
+            pll_source: None,
+        }
+    }
+
+    pub fn msi_100khz(acr: &mut ACR, pwr: &mut Pwr) -> Clocks {
+        let rcc = unsafe { &*RCC::ptr() };
+
+        // Wait until MSI is ready
+        while rcc.cr.read().msirdy().bit_is_clear() {}
+
+        unsafe {
+            rcc.cr.modify(|_, w| {
+                w.msirange()
+                    .bits(MsiFreq::RANGE100K as u8)
+                    .msirgsel()
+                    .set_bit()
+                    .msion()
+                    .set_bit();
+
+                w
+            })
+        };
+
+        // Wait until MSI is running
+        while rcc.cr.read().msirdy().bit_is_clear() {}
+
+        unsafe {
+            acr.acr().write(|w| w.latency().bits(0b000));
+        }
+
+        // Enter low power run
+        Self::low_power_run(pwr);
+
+        Clocks {
+            hclk: Hertz(100_000),
+            lsi: false,
+            lse: false,
+            msi: Some(MsiFreq::RANGE100K),
+            hsi48: false,
+            pclk1: Hertz(100_000),
+            pclk2: Hertz(100_000),
+            ppre1: 0,
+            ppre2: 0,
+            sysclk: Hertz(100_000),
+            pll_source: None,
+        }
+    }
+}
+
 /// Clock configuration
 pub struct CFGR {
     hse: Option<HseConfig>,

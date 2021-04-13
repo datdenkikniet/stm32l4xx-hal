@@ -8,6 +8,8 @@ pub struct Pwr {
     pub cr2: CR2,
     pub cr3: CR3,
     pub cr4: CR4,
+    pub sr1: SR1,
+    pub sr2: SR2,
 }
 
 /// Extension trait that constrains the `PWR` peripheral
@@ -25,6 +27,8 @@ impl PwrExt for PWR {
             cr2: CR2 { _0: () },
             cr3: CR3 { _0: () },
             cr4: CR4 { _0: () },
+            sr1: SR1 { _0: () },
+            sr2: SR2 { _0: () },
         }
     }
 }
@@ -79,5 +83,33 @@ impl CR4 {
     pub(crate) fn reg(&mut self) -> &pwr::CR4 {
         // NOTE(unsafe) this proxy grants exclusive access to this register
         unsafe { &(*PWR::ptr()).cr4 }
+    }
+}
+
+/// SR1
+pub struct SR1 {
+    _0: (),
+}
+
+impl SR1 {
+    // TODO remove `allow`
+    #[allow(dead_code)]
+    pub(crate) fn reg(&mut self) -> &pwr::SR1 {
+        // NOTE(unsafe) this proxy grants exclusive access to this register
+        unsafe { &(*PWR::ptr()).sr1 }
+    }
+}
+
+/// SR2
+pub struct SR2 {
+    _0: (),
+}
+
+impl SR2 {
+    // TODO remove `allow`
+    #[allow(dead_code)]
+    pub(crate) fn reg(&mut self) -> &pwr::SR2 {
+        // NOTE(unsafe) this proxy grants exclusive access to this register
+        unsafe { &(*PWR::ptr()).sr2 }
     }
 }
