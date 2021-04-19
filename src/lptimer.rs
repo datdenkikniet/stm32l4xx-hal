@@ -293,7 +293,7 @@ hal!(LPTIM1, lptim1, APB1R1, lptim1en, lptim1rst, lptim1sel);
 hal!(LPTIM2, lptim2, APB1R2, lptim2en, lptim2rst, lptim2sel);
 
 impl Clock for LowPowerTimer<LPTIM1> {
-    const SCALING_FACTOR: Fraction = Fraction::new(1, 1_000_000);
+    const SCALING_FACTOR: Fraction = Fraction::new(1, 32_768);
     type T = u64;
 
     fn try_now(&self) -> Result<Instant<Self>, embedded_time::clock::Error> {
