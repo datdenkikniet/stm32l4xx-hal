@@ -240,7 +240,7 @@ macro_rules! hal {
             /// If the event has occured, and `clear_interrupt` is true, the interrupt flag for this
             /// event will be cleared. Otherwise, the interrupt flag for this event will not
             /// be cleared.
-            pub fn is_event_triggered(&self, event: Event, clear_interrupt: bool) -> bool {
+            pub fn is_event_triggered(&mut self, event: Event, clear_interrupt: bool) -> bool {
                 let reg_val = self.lptim.isr.read();
                 let bit_is_set = match event {
                     Event::CompareMatch => reg_val.cmpm().bit_is_set(),
@@ -265,14 +265,14 @@ macro_rules! hal {
 
             /// Get the current counter value for this LPTIM
             #[inline]
-            pub fn get_counter(&mut self) -> u16 {
+            pub fn get_counter(&self) -> u16 {
                 self.lptim.cnt.read().bits() as u16
             }
 
             /// Get the value of the LPTIM_ARR register for this
             /// LPTIM
             #[inline]
-            pub fn get_arr(&mut self) -> u16 {
+            pub fn get_arr(&self) -> u16 {
                 self.lptim.arr.read().bits() as u16
             }
         }
