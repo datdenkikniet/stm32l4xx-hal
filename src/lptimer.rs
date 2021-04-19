@@ -133,6 +133,11 @@ macro_rules! hal {
                 self.lptim.cr.modify(|_, w| w.enable().bit(enabled));
             }
 
+            #[inline(always)]
+            fn start_continuous_mode(&mut self) {
+                self.lptim.cr.modify(|_, w| w.cntstrt().set_bit());
+            }
+
             /// Consume the LPTIM and produce a LowPowerTimer that encapsulates
             /// said LPTIM.
             ///
@@ -201,7 +206,7 @@ macro_rules! hal {
                 instance.enable();
 
                 // Write compare, arr, and continous mode start register _after_ enabling lptim
-                instance.lptim.cr.modify(|_, w| w.cntstrt().set_bit());
+                instance.start_continuous_mode();
 
                 // This operation is sound as arr_value is a u16, and there are 16 writeable bits
                 instance
@@ -223,6 +228,7 @@ macro_rules! hal {
                     Event::AutoReloadMatch => w.arrmie().set_bit(),
                 });
                 self.enable();
+                self.start_continuous_mode();
             }
 
             /// Disable interrupts for the specified event
@@ -234,6 +240,7 @@ macro_rules! hal {
                     Event::AutoReloadMatch => w.arrmie().clear_bit(),
                 });
                 self.enable();
+                self.start_continuous_mode();
             }
 
             /// Check if the specified event has been triggered for this LowPowerTimer.
