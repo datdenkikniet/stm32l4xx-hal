@@ -301,7 +301,7 @@ impl Clock for LowPowerTimer<LPTIM1> {
 
         // If the overflow bit is set, we add this to the timer value. It means the `on_interrupt`
         // has not yet happened, and we need to compensate here.
-        let ovf = if self.is_event_triggered(Event::CompareMatch, false) {
+        let ovf = if self.is_event_triggered(Event::CompareMatch) {
             0x10000
         } else {
             0
@@ -336,12 +336,12 @@ impl Monotonic for LowPowerTimer<LPTIM1> {
     }
 
     fn clear_compare_flag(&mut self) {
-        self.is_event_triggered(Event::CompareMatch, true);
+        self.clear_event_flag(Event::CompareMatch);
     }
 
     fn on_interrupt(&mut self) {
         // If there was an overflow, increment the overflow counter.
-        if self.is_event_triggered(Event::AutoReloadMatch, true) {
+        if self.is_event_triggered(Event::AutoReloadMatch) {
             self.ovf += 0x10000;
         }
     }
