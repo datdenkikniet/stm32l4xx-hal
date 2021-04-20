@@ -291,6 +291,12 @@ macro_rules! hal {
 hal!(LPTIM1, lptim1, APB1R1, lptim1en, lptim1rst, lptim1sel);
 hal!(LPTIM2, lptim2, APB1R2, lptim2en, lptim2rst, lptim2sel);
 
+impl<const N: u32> From<LowPowerTimer<LPTIM1>> for LowPowerTimerMonotonic<N> {
+    fn from(lptim: LowPowerTimer<LPTIM1>) -> Self {
+        Self { lptim, overflow: 0 }
+    }
+}
+
 pub struct LowPowerTimerMonotonic<const N: u32> {
     lptim: LowPowerTimer<LPTIM1>,
     overflow: u64,
