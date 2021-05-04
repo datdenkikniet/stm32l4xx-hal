@@ -1054,14 +1054,9 @@ impl Clocks {
         self.pclk2
     }
 
-<<<<<<< HEAD
     /// Get which source is being used for PLL
     pub fn pll_source(&self) -> Option<PllSource> {
         self.pll_source
-=======
-    pub fn pll_source(&self) -> Option<PllSource> {
-        self.pll_source.clone()
->>>>>>> Check that selected clock source is active
     }
 
     // TODO remove `allow`
