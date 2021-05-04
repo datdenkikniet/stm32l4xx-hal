@@ -511,7 +511,7 @@ mod stm32l4x2_pins {
     use gpiob::{PB10, PB11, PB13, PB14, PB4, PB6, PB7, PB8, PB9};
     use gpioc::{PC0, PC1};
 
-    pins!(I2C1, AF4, SCL: [PA9, PB6], SDA: [PA10, PB7]);
+    pins!(I2C1, AF4, SCL: [PA9, PB6, PB8], SDA: [PA10, PB7, PB9]);
 
     // Both technically not present on STM32L432XX and STM32l442XX (pins missing from ref. manual)
     pins!(I2C1, AF4, SCL: [PB8], SDA: [PB9]);
