@@ -30,9 +30,11 @@ impl RngExt for RNG {
         // the following setting of rng.cr.rngen has no effect!!
         while ahb2.enr().read().rngen().bit_is_clear() {}
 
-        self.cr.modify(|_, w| w.rngen().set_bit());
+        let mut rng = Rng { rng: self };
 
-        Rng { rng: self }
+        rng.enable();
+
+        rng
     }
 }
 
@@ -43,8 +45,12 @@ pub struct Rng {
 
 impl Rng {
     // cf. https://github.com/nrf-rs/nrf51-hal/blob/master/src/rng.rs#L31
-    pub fn free(self) -> RNG {
-        // maybe disable the RNG?
+    pub fn free(mut self, ahb2: &mut AHB2) -> RNG {
+        // Disable the RNG
+        self.disable();
+
+        ahb2.enr().modify(|_, w| w.rngen().clear_bit());
+
         self.rng
     }
 
@@ -71,6 +77,14 @@ impl Rng {
 
     pub fn is_enabled(&self) -> bool {
         self.rng.cr.read().rngen().bit()
+    }
+
+    pub fn enable(&mut self) {
+        self.rng.cr.modify(|_, w| w.rngen().set_bit());
+    }
+
+    pub fn disable(&mut self) {
+        self.rng.cr.modify(|_, w| w.rngen().clear_bit());
     }
 
     // RNG_SR
