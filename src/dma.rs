@@ -69,6 +69,7 @@ impl<BUFFER, PAYLOAD, CHANNEL, const N: usize> FrameReader<BUFFER, RxDma<PAYLOAD
 where
     BUFFER: Sized + StableDeref<Target = DMAFrame<N>> + DerefMut + 'static,
     PAYLOAD: CharacterMatch,
+    BUFFER: Sized + StableDeref<Target = DMAFrame<N>> + DerefMut + 'static,
 {
     /// Checks to see if the peripheral has detected a character match and
     /// clears the flag
