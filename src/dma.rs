@@ -1045,10 +1045,37 @@ macro_rules! dma {
     }
 }
 
-impl<BUFFER, const N: usize> Transfer<W, BUFFER, dma1::C1, ADC>
+impl TransferPayload for RxDma<ADC, dma1::C1> {
+    fn start(&mut self) {
+        self.channel.start();
+    }
+
+    fn stop(&mut self) {
+        self.channel.stop();
+    }
+}
+
+impl RxDma<ADC, dma1::C1> {
+    pub fn split(mut self) -> (ADC, dma1::C1) {
+        self.stop();
+        (self.payload, self.channel)
+    }
+}
+
+impl<BUFFER, const N: usize> Transfer<W, BUFFER, RxDma<ADC, dma1::C1>>
 where
     BUFFER: Sized + StableDeref<Target = [u16; N]> + DerefMut + 'static,
 {
+    pub fn from_adc_dma(
+        dma: RxDma<ADC, dma1::C1>,
+        buffer: BUFFER,
+        dma_mode: adc::DmaMode,
+        transfer_complete_interrupt: bool,
+    ) -> Self {
+        let (adc, channel) = dma.split();
+        Transfer::from_adc(adc, channel, buffer, dma_mode, transfer_complete_interrupt)
+    }
+
     /// Initiate a new DMA transfer from an ADC.
     ///
     /// `dma_mode` indicates the desired mode for DMA.
@@ -1111,8 +1138,10 @@ where
         Transfer {
             _mode: PhantomData {},
             buffer,
-            channel,
-            payload: adc,
+            payload: RxDma {
+                channel,
+                payload: adc,
+            },
         }
     }
 }
