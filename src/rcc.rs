@@ -85,6 +85,7 @@ impl RccExt for RCC {
                 sysclk: None,
                 pll_source: None,
                 pll_config: None,
+                clk48_source: None,
             },
         }
     }
@@ -365,6 +366,7 @@ pub struct CFGR {
     sysclk: Option<u32>,
     pll_source: Option<PllSource>,
     pll_config: Option<PllConfig>,
+    clk48_source: Option<Clk48Source>,
 }
 
 impl CFGR {
@@ -456,6 +458,11 @@ impl CFGR {
     /// Sets the PLL source
     pub fn pll_source(mut self, source: PllSource) -> Self {
         self.pll_source = Some(source);
+        self
+    }
+
+    pub fn clk48_source(mut self, source: Clk48Source) -> Self {
+        self.clk48_source = Some(source);
         self
     }
 
@@ -570,9 +577,35 @@ impl CFGR {
             while rcc.crrcr.read().hsi48rdy().bit_is_clear() {}
         }
 
-        // Select MSI as clock source for usb48, rng ...
-        if let Some(MsiFreq::RANGE48M) = self.msi {
-            unsafe { rcc.ccipr.modify(|_, w| w.clk48sel().bits(0b11)) };
+        // Pick a clock for the 48 mhz clock, if any
+        // Note: MSI may be lower than 48Mhz for this operation,
+        // but then it can most likely not be used to actually
+        // drive the USBFS and SDMMC. The RNG can be driver
+        // at clocks slower than 48 Mhz, and is also validated
+        // for 400khz (see RM0394, section 24.7.2)
+        let clk48_source = match self.clk48_source {
+            Some(source) => Some(source),
+            None => {
+                if let Some(MsiFreq::RANGE48M) = self.msi {
+                    Some(Clk48Source::MSI)
+                } else {
+                    None
+                }
+            }
+        };
+
+        // Select specified clock
+        if let Some(clk48_source) = clk48_source {
+            // Assert that selected clk48 source is actually enabled
+            assert!(
+                (clk48_source == Clk48Source::HSI48 && self.hsi48)
+                    || (clk48_source == Clk48Source::MSI && self.msi.is_some()),
+                "Selected CLK48 source is not enabled!"
+            );
+            unsafe {
+                rcc.ccipr
+                    .modify(|_, w| w.clk48sel().bits(clk48_source.to_clk48sel()))
+            };
         }
 
         //
@@ -810,6 +843,7 @@ impl CFGR {
             ppre2,
             sysclk: Hertz(sysclk),
             pll_source: pllconf.map(|_| pll_source),
+            clk48_source: clk48_source,
         }
     }
 }
@@ -891,6 +925,29 @@ impl PllSource {
     }
 }
 
+/// 48 Mhz clock source
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Clk48Source {
+    HSI48,
+    // Currently, we don't do anything with either of these
+    // clock outputs yet (i.e. do not enable or anything like that)
+    // so they're left out for now
+    // PLL48M2,
+    // PLL48M1,
+    MSI,
+}
+
+impl Clk48Source {
+    fn to_clk48sel(self) -> u8 {
+        match self {
+            Clk48Source::HSI48 => 0b00,
+            // Clk48Source::PLL48M2 => 0b01,
+            // Clk48Source::PLL48M1 => 0b10,
+            Clk48Source::MSI => 0b11,
+        }
+    }
+}
+
 /// Frozen clock frequencies
 ///
 /// The existence of this value indicates that the clock configuration can no longer be changed
@@ -907,6 +964,7 @@ pub struct Clocks {
     ppre2: u8,
     sysclk: Hertz,
     pll_source: Option<PllSource>,
+    clk48_source: Option<Clk48Source>,
 }
 
 impl Clocks {
@@ -948,6 +1006,10 @@ impl Clocks {
     /// Get which source is being used for PLL
     pub fn pll_source(&self) -> Option<PllSource> {
         self.pll_source
+    }
+
+    pub fn clk48_source(&self) -> Option<Clk48Source> {
+        self.clk48_source
     }
 
     // TODO remove `allow`

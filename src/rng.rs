@@ -2,7 +2,7 @@ extern crate core;
 #[cfg(feature = "unproven")]
 use core::cmp;
 
-use crate::rcc::{Clocks, AHB2};
+use crate::rcc::{Clk48Source, Clocks, MsiFreq, AHB2};
 use crate::stm32::RNG;
 pub use rand_core::RngCore;
 
@@ -17,13 +17,19 @@ impl RngExt for RNG {
         // crrcr.crrcr().modify(|_, w| w.hsi48on().set_bit()); // p. 180 in ref-manual
         // ...this is now supposed to be done in RCC configuration before freezing
 
-        // hsi48 should be turned on previously or msi at 48mhz
-        let msi = match clocks.msi() {
-            Some(msi) => msi == crate::rcc::MsiFreq::RANGE48M,
-            None => false,
-        };
-        let hsi = clocks.hsi48();
-        assert!(msi || hsi);
+        // hsi48 should be turned on previously or msi at one of the validated speeds
+        match clocks.clk48_source() {
+            Some(clk48_source) => match (clk48_source, clocks.msi()) {
+                (Clk48Source::MSI, Some(MsiFreq::RANGE48M)) => {}
+                (Clk48Source::MSI, Some(MsiFreq::RANGE400K)) => {}
+                (Clk48Source::MSI, Some(_)) => {
+                    panic!("RNG is not validated for selected CLK48 speed!")
+                }
+                (Clk48Source::MSI, None) => unreachable!(),
+                (Clk48Source::HSI48, _) => {}
+            },
+            None => panic!("CLK48 is not enabled for RNG!"),
+        }
 
         ahb2.enr().modify(|_, w| w.rngen().set_bit());
         // if we don't do this... we can be "too fast", and
